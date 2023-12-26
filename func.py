@@ -3,7 +3,7 @@ import torch.nn as nn
 '''
 在这里假设数据的维度都为【batch，datalen，features】
 '''
-
+EPS=1e-8
 def DF(data,m=6,n=6):
     '''
     down frequencey
@@ -50,7 +50,30 @@ def mean_class(X,cls):
         # if class_mask.any():
         # 为每个特征计算均值
         class_mean = torch.mean(X[class_mask], dim=0)
-        # print(class_mean)
         # 使用扩展的掩码将均值赋值给相应的类别位置
         out[class_mask] = class_mean
+    return out
+def zscore_torch(X, axis=0):
+    # Copy the input tensor
+    tmpx = X.clone()
+
+    # Set the values at 'nvalid' indices to NaN
+    # tmpx[nvalid] = torch.nan
+    mean = torch.mean(tmpx, dim=axis, keepdim=True)
+    std = torch.std(tmpx, dim=axis, keepdim=True)
+    # Perform standardization
+    zscored = (tmpx - mean) / (std + EPS)
+
+    return zscored
+
+def dummy_class(cls):
+    num_classes = int(torch.max(cls).item() + 1)
+    # batch_size, time_series, num_features = X.shape
+
+    # 初始化输出张量
+    out = torch.zeros((cls.shape[0],cls.shape[0]), dtype=torch.int)
+    for i in range(num_classes):
+        class_mask = (cls == i)
+        out[class_mask] = class_mask.int()
+        
     return out
