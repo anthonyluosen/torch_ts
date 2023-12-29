@@ -68,12 +68,42 @@ def zscore_torch(X, axis=0):
 
 def dummy_class(cls):
     num_classes = int(torch.max(cls).item() + 1)
-    # batch_size, time_series, num_features = X.shape
-
+    # print(cls.shape)
     # 初始化输出张量
-    out = torch.zeros((cls.shape[0],cls.shape[0]), dtype=torch.int)
+    out = torch.zeros((cls.shape[0],cls.shape[0]), dtype=torch.int).to(cls.device)
     for i in range(num_classes):
         class_mask = (cls == i)
-        out[class_mask] = class_mask.int()
-        
-    return out
+        out[class_mask] = -class_mask.int()
+    return out+1
+
+def idx2onehot(idx, n):
+    # 确保idx中的最大值小于n
+    assert torch.max(idx).item() < n
+
+    # 如果idx是一维的，将其转换为二维的（每行一个元素）
+    if idx.dim() == 1:
+        idx = idx.unsqueeze(1)
+
+    # 创建一个全零的矩阵，大小为(idx的行数, n)
+    onehot = torch.zeros(idx.size(0), n).to(idx.device)
+
+    # 使用scatter_方法填充onehot矩阵，把对应的位置设为1
+    onehot.scatter_(1, idx, 1)
+    
+    return onehot
+
+def mask_(matrices, maskval=0.0, mask_diagonal=True):
+    """
+    Masks out all values in the given batch of matrices where i <= j holds,
+    i < j if mask_diagonal is false
+
+    In place operation
+
+    :param tns:
+    :return:
+    """
+
+    h, w = matrices.size(-2), matrices.size(-1)
+
+    indices = torch.triu_indices(h, w, offset=0 if mask_diagonal else 1)
+    matrices[..., indices[0], indices[1]] = maskval
